@@ -1,0 +1,6 @@
+flowchart TD
+  A[Select start and destination] --> B[Load active graph]
+  B --> C[Apply accessibility and closures]
+  C --> D[Run A*]
+  D --> E[Generate instructions]
+  E --> F[Render route in 3D]

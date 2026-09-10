@@ -1,0 +1,1 @@
+{"version":"0.1.0","coordinateSystem":"local_metric_3857_demo","blocks":[{"code":"A","name":"A Block","floors":[0,1,2,3]},{"code":"B","name":"B Block","floors":[0,1,2]},{"code":"C","name":"C Block","floors":[0,1,2]}],"sampleLocations":["A-G-ENT","A-105","A-204","B-105","B-204","C-208","CSE-OFF","Library","Canteen","Auditorium"]}

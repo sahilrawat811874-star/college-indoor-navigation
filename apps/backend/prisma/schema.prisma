@@ -1,0 +1,334 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis, pg_trgm, unaccent]
+}
+
+enum RoleName {
+  SUPER_ADMIN
+  ADMIN
+  MAP_EDITOR
+  STAFF
+  STUDENT
+  VISITOR
+}
+
+enum RoomType {
+  CLASSROOM
+  LAB
+  FACULTY_ROOM
+  OFFICE
+  LIBRARY
+  AUDITORIUM
+  CANTEEN
+  WASHROOM
+  STORAGE
+  OTHER
+}
+
+enum FacilityType {
+  WASHROOM
+  DRINKING_WATER
+  CANTEEN
+  LIBRARY
+  AUDITORIUM
+  HELP_DESK
+  EMERGENCY_EXIT
+  FIRST_AID
+  ELEVATOR
+  STAIRCASE
+  RAMP
+  OTHER
+}
+
+enum NavigationNodeType {
+  ROOM_ENTRANCE
+  CORRIDOR_POINT
+  INTERSECTION
+  STAIR_ENTRY
+  STAIR_EXIT
+  ELEVATOR_ENTRY
+  ELEVATOR_EXIT
+  BLOCK_ENTRANCE
+  CAMPUS_PATH
+  EMERGENCY_EXIT
+}
+
+enum NavigationEdgeType {
+  CORRIDOR
+  STAIRS
+  ELEVATOR
+  RAMP
+  OUTDOOR_PATH
+  BLOCK_CONNECTOR
+  ROOM_ENTRY
+}
+
+enum ClosureTargetType {
+  ROOM
+  FLOOR
+  BLOCK
+  EDGE
+  NODE
+  STAIRCASE
+  ELEVATOR
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        RoleName @unique
+  description String?
+  users       User[]
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("roles")
+}
+
+model User {
+  id           String     @id @default(uuid())
+  name         String
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  roleId       String     @map("role_id")
+  role         Role       @relation(fields: [roleId], references: [id])
+  isActive     Boolean    @default(true) @map("is_active")
+  auditLogs    AuditLog[]
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Block {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  geometry    Unsupported("geometry(Polygon, 3857)")?
+  centroid    Unsupported("geometry(Point, 3857)")?
+  floors      Floor[]
+  rooms       Room[]
+  facilities  Facility[]
+  nodes       NavigationNode[]
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("blocks")
+}
+
+model Floor {
+  id                String   @id @default(uuid())
+  blockId           String   @map("block_id")
+  block             Block    @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  floorNumber       Int      @map("floor_number")
+  label             String
+  elevationMeters   Float    @default(0) @map("elevation_meters")
+  floorPlanGeometry Unsupported("geometry(Polygon, 3857)")? @map("floor_plan_geometry")
+  rooms             Room[]
+  facilities        Facility[]
+  nodes             NavigationNode[]
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@unique([blockId, floorNumber])
+  @@map("floors")
+}
+
+model Department {
+  id           String   @id @default(uuid())
+  name         String
+  code         String   @unique
+  description  String?
+  officeRoomId String?  @map("office_room_id")
+  officeRoom   Room?    @relation("DepartmentOffice", fields: [officeRoomId], references: [id])
+  rooms        Room[]   @relation("DepartmentRooms")
+  faculty      FacultyMember[]
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("departments")
+}
+
+model Room {
+  id             String       @id @default(uuid())
+  blockId        String       @map("block_id")
+  floorId        String       @map("floor_id")
+  departmentId   String?      @map("department_id")
+  block          Block        @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  floor          Floor        @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  department     Department?  @relation("DepartmentRooms", fields: [departmentId], references: [id])
+  departmentHere Department[] @relation("DepartmentOffice")
+  roomNumber     String       @map("room_number")
+  name           String
+  type           RoomType
+  description    String?
+  capacity       Int?
+  isAccessible   Boolean      @default(true) @map("is_accessible")
+  isRestricted   Boolean      @default(false) @map("is_restricted")
+  geometry       Unsupported("geometry(Polygon, 3857)")?
+  entrancePoint  Unsupported("geometry(Point, 3857)")? @map("entrance_point")
+  centerPoint    Unsupported("geometry(Point, 3857)")? @map("center_point")
+  facilities     Facility[]
+  facultyOffices FacultyMember[]
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@unique([floorId, roomNumber])
+  @@index([roomNumber])
+  @@map("rooms")
+}
+
+model Facility {
+  id           String       @id @default(uuid())
+  blockId      String       @map("block_id")
+  floorId      String       @map("floor_id")
+  roomId       String?      @map("room_id")
+  block        Block        @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  floor        Floor        @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  room         Room?        @relation(fields: [roomId], references: [id])
+  name         String
+  type         FacilityType
+  description  String?
+  isAccessible Boolean      @default(true) @map("is_accessible")
+  geometry     Unsupported("geometry(Geometry, 3857)")?
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  @@index([type])
+  @@map("facilities")
+}
+
+model FacultyMember {
+  id           String     @id @default(uuid())
+  name         String
+  email        String?    @unique
+  departmentId String     @map("department_id")
+  officeRoomId String?    @map("office_room_id")
+  designation  String?
+  department   Department @relation(fields: [departmentId], references: [id])
+  officeRoom   Room?      @relation(fields: [officeRoomId], references: [id])
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  @@map("faculty_members")
+}
+
+model NavigationNode {
+  id             String             @id @default(uuid())
+  blockId        String             @map("block_id")
+  floorId        String             @map("floor_id")
+  block          Block              @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  floor          Floor              @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  nodeType       NavigationNodeType @map("node_type")
+  label          String
+  position       Unsupported("geometry(PointZ, 3857)")
+  isAccessible   Boolean            @default(true) @map("is_accessible")
+  isRestricted   Boolean            @default(false) @map("is_restricted")
+  isActive       Boolean            @default(true) @map("is_active")
+  outgoingEdges  NavigationEdge[]   @relation("FromNode")
+  incomingEdges  NavigationEdge[]   @relation("ToNode")
+  qrMarkers      QrLocationMarker[]
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+
+  @@map("navigation_nodes")
+}
+
+model NavigationEdge {
+  id                   String             @id @default(uuid())
+  fromNodeId            String             @map("from_node_id")
+  toNodeId              String             @map("to_node_id")
+  fromNode              NavigationNode     @relation("FromNode", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  toNode                NavigationNode     @relation("ToNode", fields: [toNodeId], references: [id], onDelete: Cascade)
+  edgeType              NavigationEdgeType @map("edge_type")
+  distanceMeters        Float              @map("distance_meters")
+  estimatedTimeSeconds  Int                @map("estimated_time_seconds")
+  cost                  Float
+  isAccessible          Boolean            @default(true) @map("is_accessible")
+  isRestricted          Boolean            @default(false) @map("is_restricted")
+  isBidirectional       Boolean            @default(true) @map("is_bidirectional")
+  isActive              Boolean            @default(true) @map("is_active")
+  geometry              Unsupported("geometry(LineStringZ, 3857)")?
+  createdAt             DateTime           @default(now()) @map("created_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
+
+  @@index([fromNodeId])
+  @@index([toNodeId])
+  @@map("navigation_edges")
+}
+
+model Closure {
+  id         String            @id @default(uuid())
+  targetType ClosureTargetType @map("target_type")
+  targetId   String            @map("target_id")
+  reason     String
+  startsAt   DateTime?         @map("starts_at")
+  endsAt     DateTime?         @map("ends_at")
+  isActive   Boolean           @default(true) @map("is_active")
+  createdBy  String?           @map("created_by")
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  @@index([targetType, targetId])
+  @@map("closures")
+}
+
+model QrLocationMarker {
+  id               String         @id @default(uuid())
+  code             String         @unique
+  blockId          String         @map("block_id")
+  floorId          String         @map("floor_id")
+  navigationNodeId String         @map("navigation_node_id")
+  label            String
+  position         Unsupported("geometry(PointZ, 3857)")
+  isActive         Boolean        @default(true) @map("is_active")
+  navigationNode   NavigationNode @relation(fields: [navigationNodeId], references: [id])
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  @@map("qr_location_markers")
+}
+
+model SearchEvent {
+  id              String   @id @default(uuid())
+  query           String
+  normalizedQuery String?  @map("normalized_query")
+  resultType      String?  @map("result_type")
+  resultId        String?  @map("result_id")
+  userRole        String?  @map("user_role")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("search_events")
+}
+
+model NavigationSession {
+  id                    String   @id @default(uuid())
+  startNodeId            String   @map("start_node_id")
+  destinationNodeId      String   @map("destination_node_id")
+  routeDistanceMeters    Float    @map("route_distance_meters")
+  estimatedTimeSeconds   Int      @map("estimated_time_seconds")
+  accessibilityMode      Boolean  @default(false) @map("accessibility_mode")
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  @@map("navigation_sessions")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?  @map("user_id")
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  beforeJson Json?    @map("before_json")
+  afterJson  Json?    @map("after_json")
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}

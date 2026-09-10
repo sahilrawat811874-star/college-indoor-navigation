@@ -1,0 +1,12 @@
+import { useQuery } from '@tanstack/react-query';
+import { fetchCampusMap } from '../services/mapApi';
+import { MapControlPanel } from '../components/layout/MapControlPanel';
+import { LocationSearch } from '../features/search/components/LocationSearch';
+import { CampusCanvas } from '../three/CampusCanvas';
+import type { CampusMapDto } from '../types/map';
+const fallbackMap: CampusMapDto = { blocks: [{ id: 'demo-a', code: 'A', name: 'A Block' }, { id: 'demo-b', code: 'B', name: 'B Block' }, { id: 'demo-c', code: 'C', name: 'C Block' }], floors: [{ id: 'a0', blockId: 'demo-a', floorNumber: 0, label: 'Ground Floor', elevationMeters: 0 }, { id: 'a1', blockId: 'demo-a', floorNumber: 1, label: '1st Floor', elevationMeters: 4 }, { id: 'a2', blockId: 'demo-a', floorNumber: 2, label: '2nd Floor', elevationMeters: 8 }, { id: 'b0', blockId: 'demo-b', floorNumber: 0, label: 'Ground Floor', elevationMeters: 0 }, { id: 'b1', blockId: 'demo-b', floorNumber: 1, label: '1st Floor', elevationMeters: 4 }, { id: 'c0', blockId: 'demo-c', floorNumber: 0, label: 'Ground Floor', elevationMeters: 0 }], rooms: [{ id: 'r1', blockId: 'demo-a', floorId: 'a0', roomNumber: 'A-G-ENT', name: 'Main Entrance', type: 'OTHER', isAccessible: true, isRestricted: false }, { id: 'r2', blockId: 'demo-a', floorId: 'a2', roomNumber: 'A-204', name: 'Room A-204', type: 'CLASSROOM', isAccessible: true, isRestricted: false }, { id: 'r3', blockId: 'demo-b', floorId: 'b1', roomNumber: 'B-105', name: 'BCA Lab', type: 'LAB', isAccessible: true, isRestricted: false }, { id: 'r4', blockId: 'demo-c', floorId: 'c0', roomNumber: 'AUD', name: 'Auditorium', type: 'AUDITORIUM', isAccessible: true, isRestricted: false }], facilities: [], navigationNodes: [], navigationEdges: [] };
+export function MapPage() {
+  const { data, isLoading, error } = useQuery({ queryKey: ['campus-map'], queryFn: fetchCampusMap, retry: false });
+  const map = data ?? fallbackMap;
+  return <main className="app-shell"><section className="topbar"><div><p className="eyebrow">3D indoor navigation</p><h1>College Map</h1></div><LocationSearch blocks={map.blocks} floors={map.floors} rooms={map.rooms} /></section><section className="workspace"><MapControlPanel map={map}/><section className="canvas-wrap"><CampusCanvas map={map} /></section></section>{isLoading && <div className="toast">Loading backend map data...</div>}{error && <div className="toast">Using fallback demo map until backend is running.</div>}</main>;
+}

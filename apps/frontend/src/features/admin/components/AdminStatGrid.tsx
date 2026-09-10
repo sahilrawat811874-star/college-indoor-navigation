@@ -1,0 +1,1 @@
+export function AdminStatGrid({ stats }: { stats?: Record<string, number> }) { const items=Object.entries(stats??{blocks:0,floors:0,rooms:0,facilities:0,nodes:0,edges:0}); return <div className="admin-grid">{items.map(([k,v])=><div className="admin-stat" key={k}><span>{k}</span><strong>{v}</strong></div>)}</div>; }

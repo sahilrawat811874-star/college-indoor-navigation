@@ -1,0 +1,10 @@
+CREATE INDEX IF NOT EXISTS idx_blocks_geometry ON blocks USING GIST (geometry);
+CREATE INDEX IF NOT EXISTS idx_blocks_centroid ON blocks USING GIST (centroid);
+CREATE INDEX IF NOT EXISTS idx_floors_geometry ON floors USING GIST (floor_plan_geometry);
+CREATE INDEX IF NOT EXISTS idx_rooms_geometry ON rooms USING GIST (geometry);
+CREATE INDEX IF NOT EXISTS idx_rooms_entrance ON rooms USING GIST (entrance_point);
+CREATE INDEX IF NOT EXISTS idx_rooms_center ON rooms USING GIST (center_point);
+CREATE INDEX IF NOT EXISTS idx_facilities_geometry ON facilities USING GIST (geometry);
+CREATE INDEX IF NOT EXISTS idx_navigation_nodes_position ON navigation_nodes USING GIST (position);
+CREATE INDEX IF NOT EXISTS idx_navigation_edges_geometry ON navigation_edges USING GIST (geometry);
+CREATE INDEX IF NOT EXISTS idx_qr_location_markers_position ON qr_location_markers USING GIST (position);

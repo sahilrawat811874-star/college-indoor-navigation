@@ -1,0 +1,9 @@
+export type ViewMode = '2d' | '3d';
+export type BlockDto = { id: string; code: string; name: string; description?: string | null };
+export type FloorDto = { id: string; blockId: string; floorNumber: number; label: string; elevationMeters: number };
+export type RoomDto = { id: string; blockId: string; floorId: string; roomNumber: string; name: string; type: string; isAccessible: boolean; isRestricted: boolean };
+export type FacilityDto = { id: string; blockId: string; floorId: string; roomId?: string | null; name: string; type: string; isAccessible: boolean };
+export type NavigationNodeDto = { id: string; blockId: string; floorId: string; nodeType: string; label: string; isAccessible: boolean; isRestricted: boolean; isActive: boolean };
+export type NavigationEdgeDto = { id: string; fromNodeId: string; toNodeId: string; edgeType: string; distanceMeters: number; isAccessible: boolean; isActive: boolean };
+export type CampusMapDto = { blocks: BlockDto[]; floors: FloorDto[]; rooms: RoomDto[]; facilities: FacilityDto[]; navigationNodes: NavigationNodeDto[]; navigationEdges: NavigationEdgeDto[] };
+export type SceneRoom = RoomDto & { x: number; z: number; width: number; depth: number; y: number };
