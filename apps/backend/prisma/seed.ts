@@ -110,7 +110,23 @@ async function main() {
   async function addNode(label: string, blockCode: string, floorNumber: number, nodeType: NavigationNodeType, x: number, y: number, accessible = true) {
     const block = blocks.get(blockCode)!;
     const floor = floors.get(`${blockCode}-${floorNumber}`)!;
-    const node = await prisma.navigationNode.create({ data: { blockId: block.id, floorId: floor.id, nodeType, label, isAccessible: accessible } });
+const nodeId = crypto.randomUUID();
+
+await prisma.$executeRawUnsafe(
+  `INSERT INTO navigation_nodes
+   (id, block_id, floor_id, node_type, label, is_accessible)
+   VALUES ($1, $2, $3, $4, $5, $6)`,
+  nodeId,
+  block.id,
+  floor.id,
+  nodeType,
+  label,
+  accessible
+);
+
+const node = await prisma.navigationNode.findUniqueOrThrow({
+  where: { id: nodeId }
+});
     await setGeometry('navigation_nodes', node.id, { position: point(x, y, floor.elevationMeters) });
     nodeByLabel.set(label, node.id);
     return node;
@@ -160,8 +176,20 @@ async function main() {
     await addEdge(`${r.block}-${r.floor}-${side}`, `${r.no}-DOOR`, NavigationEdgeType.ROOM_ENTRY, 12);
   }
 
-  await prisma.qrLocationMarker.create({ data: { code: 'QR-A-G-MAIN-ENTRANCE', blockId: blocks.get('A')!.id, floorId: floors.get('A-0')!.id, navigationNodeId: nodeByLabel.get('A-0-ENTRANCE')!, label: 'A Block Ground Floor Main Entrance' } });
-  await setGeometry('qr_location_markers', (await prisma.qrLocationMarker.findUniqueOrThrow({ where: { code: 'QR-A-G-MAIN-ENTRANCE' } })).id, { position: point(10, 35, 0) });
+const qrId = crypto.randomUUID();
+
+await prisma.$executeRawUnsafe(
+  `INSERT INTO qr_location_markers
+   (id, code, block_id, floor_id, navigation_node_id, label)
+   VALUES ($1, $2, $3, $4, $5, $6)`,
+  qrId,
+  'QR-A-G-MAIN-ENTRANCE',
+  blocks.get('A')!.id,
+  floors.get('A-0')!.id,
+  nodeByLabel.get('A-0-ENTRANCE')!,
+  'A Block Ground Floor Main Entrance'
+);
+  await setGeometry('qr_location_markers', qrId, { position: point(10, 35, 0) });
 
   console.log('Seeded demo campus with A/B/C blocks, rooms, facilities, QR marker, and navigation graph.');
 }
